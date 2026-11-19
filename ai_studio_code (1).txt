@@ -1,15 +1,2 @@
-XConsoleLauncher/
-├── .github/workflows/build-apk.yml
-├── gradle.properties
-├── settings.gradle.kts
-├── build.gradle.kts
-└── app/
-    ├── build.gradle.kts
-    └── src/main/
-        ├── AndroidManifest.xml
-        ├── java/com/xconsole/launcher/
-        │   ├── MainActivity.kt
-        │   └── CloudPlayerActivity.kt
-        └── res/layout/
-            ├── activity_main.xml
-            └── item_app_tile.xml
+android.useAndroidX=true
+org.gradle.jvmargs=-Xmx2048m
