@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="theme-color" content="#101010" />
+  <title>X-Console OS</title>
+  <style>
+    :root {
+      --bg: #0f1012;
+      --surface: #1b1d21;
+      --surface-light: #262930;
+      --accent: #107c10;
+      --accent-glow: #2ee83b;
+      --text: #f4f4f6;
+      --muted: #9ba1a8;
+    }
+
+    * {
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(circle at 20% 20%, #172719 0%, #0f1012 55%, #090a0c 100%);
+      color: var(--text);
+      font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+      overflow: hidden;
+    }
+
+    /* Boot Splash Screen */
+    #boot-screen {
+      position: fixed;
+      inset: 0;
+      background: #070809;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      transition: opacity 0.6s ease;
+    }
+    #boot-screen.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+    .boot-orb {
+      width: 88px;
+      height: 88px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 30%, #4aff56, var(--accent) 60%, #073807 100%);
+      box-shadow: 0 0 45px rgba(46, 232, 59, 0.55);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 900;
+      font-size: 42px;
+      color: #0b190c;
+      animation: pulseBoot 1.6s infinite ease-in-out;
+    }
+    .boot-text {
+      margin-top: 22px;
+      font-size: 15px;
+      letter-spacing: 3px;
+      color: var(--muted);
+      text-transform: uppercase;
+    }
+    .boot-btn {
+      margin-top: 24px;
+      padding: 12px 28px;
+      border-radius: 999px;
+      border: 2px solid var(--accent-glow);
+      background: rgba(16, 124, 16, 0.35);
+      color: #fff;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    @keyframes pulseBoot {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.06); }
+    }
+
+    /* Main Shell */
+    .shell {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      padding: max(14px, env(safe-area-inset-top)) max(22px, env(safe-area-inset-right)) max(14px, env(safe-area-inset-bottom)) max(22px, env(safe-area-inset-left));
+    }
+
+    /* Top Status Bar */
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding-bottom: 12px;
+    }
+    .profile-pill {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: rgba(255,255,255,0.07);
+      padding: 6px 14px 6px 6px;
+      border-radius: 999px;
+      cursor: pointer;
+    }
+    .avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent-glow), var(--accent));
+      display: grid;
+      place-items: center;
+      font-weight: 800;
+      color: #09130a;
+    }
+    .gamertag { font-weight: 700; font-size: 14px; }
+    .gamerscore { font-size: 11px; color: var(--accent-glow); font-weight: 700; }
+
+    .tabs {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+    }
+    .tab {
+      padding: 7px 14px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--muted);
+      background: transparent;
+      border: none;
+      cursor: pointer;
+    }
+    .tab.active {
+      background: rgba(255,255,255,0.14);
+      color: #fff;
+    }
+
+    .status-icons {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+    .ctrl-badge {
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+      background: rgba(255,255,255,0.08);
+    }
+    .ctrl-badge.connected {
+      background: rgba(46, 232, 59, 0.2);
+      color: var(--accent-glow);
+      border: 1px solid rgba(46, 232, 59, 0.4);
+    }
+
+    /* Main Content Area */
+    .main {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px 4px 20px;
+      scrollbar-width: none;
+    }
+    .main::-webkit-scrollbar { display: none; }
+
+    .section-title {
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: var(--muted);
+      margin: 10px 0 10px;
+      font-weight: 700;
+    }
+
+    /* Tile Grids */
+    .hero-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+      gap: 14px;
+      margin-bottom: 18px;
+    }
+
+    .tile {
+      position: relative;
+      background: var(--surface);
+      border-radius: 10px;
+      overflow: hidden;
+      min-height: 128px;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      padding: 14px;
+      cursor: pointer;
+      border: 2px solid transparent;
+      transition: transform 0.14s ease, border-color 0.14s ease, box-shadow 0.14s ease;
+    }
+    .tile.large {
+      min-height: 165px;
+      grid-column: span 2;
+    }
+    @media (max-width: 600px) {
+      .tile.large { grid-column: span 1; }
+    }
+    .tile.focused, .tile:hover {
+      transform: scale(1.035);
+      border-color: var(--accent-glow);
+      box-shadow: 0 0 22px rgba(46, 232, 59, 0.45);
+      z-index: 2;
+    }
+    .tile-bg {
+      position: absolute;
+      inset: 0;
+      opacity: 0.9;
+      z-index: 0;
+    }
+    .tile-content {
+      position: relative;
+      z-index: 1;
+      text-shadow: 0 2px 8px rgba(0,0,0,0.8);
+    }
+    .tile-badge {
+      display: inline-block;
+      font-size: 10px;
+      font-weight: 800;
+      text-transform: uppercase;
+      padding: 3px 7px;
+      border-radius: 4px;
+      background: rgba(0,0,0,0.55);
+      margin-bottom: 6px;
+    }
+    .tile-title { font-size: 16px; font-weight: 800; }
+    .tile-sub { font-size: 12px; color: #d8dce0; margin-top: 2px; }
+
+    /* Bottom Button Prompts */
+    .footer-hints {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: 10px;
+      border-top: 1px solid rgba(255,255,255,0.08);
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .hints-left { display: flex; gap: 16px; flex-wrap: wrap; }
+    .btn-hint { display: inline-flex; align-items: center; gap: 6px; }
+    .pill-key {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      display: inline-grid;
+      place-items: center;
+      font-weight: 900;
+      font-size: 11px;
+      color: #000;
+    }
+    .key-a { background: #37d646; }
+    .key-b { background: #e83b3b; color: #fff; }
+    .key-x { background: #2c7be5; color: #fff; }
+    .key-y { background: #f2c94c; }
+
+    /* Guide Slide-Over Drawer */
+    .guide-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.65);
+      backdrop-filter: blur(6px);
+      z-index: 100;
+      display: none;
+    }
+    .guide-backdrop.open { display: block; }
+    .guide-panel {
+      width: min(340px, 88vw);
+      height: 100%;
+      background: #16181c;
+      border-right: 1px solid rgba(255,255,255,0.12);
+      padding: 22px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .guide-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 18px;
+      font-weight: 800;
+      padding-bottom: 10px;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+    .guide-item {
+      padding: 12px 14px;
+      border-radius: 8px;
+      background: var(--surface);
+      color: #fff;
+      font-weight: 600;
+      font-size: 14px;
+      border: 2px solid transparent;
+      cursor: pointer;
+      text-align: left;
+    }
+    .guide-item:hover { border-color: var(--accent-glow); }
+
+    /* Modal (Built-in Game & Add Shortcut) */
+    .modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(5,6,8,0.92);
+      z-index: 200;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .modal.open { display: flex; }
+    .modal-box {
+      background: var(--surface);
+      border-radius: 14px;
+      padding: 22px;
+      width: min(460px, 95vw);
+      border: 1px solid rgba(255,255,255,0.14);
+    }
+    .modal-box input {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 1px solid #3a3f4a;
+      background: #101216;
+      color: #fff;
+      margin: 8px 0 14px;
+      font-size: 14px;
+    }
+    .btn-row { display: flex; gap: 10px; justify-content: flex-end; }
+    .btn {
+      padding: 10px 18px;
+      border-radius: 8px;
+      border: none;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-ghost { background: var(--surface-light); color: #fff; }
+
+    /* Built-in Game Canvas */
+    #game-canvas {
+      background: #080a0c;
+      border: 2px solid var(--accent-glow);
+      border-radius: 10px;
+      max-width: 100%;
+      touch-action: none;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Boot Screen -->
+  <div id="boot-screen">
+    <div class="boot-orb">X</div>
+    <div class="boot-text">X-Console OS</div>
+    <button class="boot-btn" id="power-on-btn">Power On Console</button>
+  </div>
+
+  <!-- Main Dashboard -->
+  <div class="shell">
+    <header class="topbar">
+      <div class="profile-pill" onclick="toggleGuide(true)">
+        <div class="avatar">X</div>
+        <div>
+          <div class="gamertag" id="gamertag-display">PlayerOne</div>
+          <div class="gamerscore">G 14,250</div>
+        </div>
+      </div>
+
+      <nav class="tabs" id="tabs">
+        <button class="tab active" data-tab="home">Home</button>
+        <button class="tab" data-tab="games">My Games</button>
+        <button class="tab" data-tab="apps">Console Tools</button>
+      </nav>
+
+      <div class="status-icons">
+        <span class="ctrl-badge" id="ctrl-status">No Controller</span>
+        <span id="clock">--:--</span>
+      </div>
+    </header>
+
+    <main class="main" id="dashboard-main">
+      <div class="section-title">Console Dashboard</div>
+      <div class="hero-row" id="tile-grid"></div>
+    </main>
+
+    <footer class="footer-hints">
+      <div class="hints-left">
+        <span class="btn-hint"><span class="pill-key key-a">A</span> Launch</span>
+        <span class="btn-hint"><span class="pill-key key-b">B</span> Back / Guide</span>
+        <span class="btn-hint"><span class="pill-key key-x">X</span> Add Shortcut</span>
+        <span class="btn-hint"><span class="pill-key key-y">Y</span> Fullscreen</span>
+      </div>
+      <div>LB / RB Switch Tabs • Connect Xbox BT Controller</div>
+    </footer>
+  </div>
+
+  <!-- Slide-out Xbox Guide -->
+  <div class="guide-backdrop" id="guide-backdrop" onclick="if(event.target===this) toggleGuide(false)">
+    <aside class="guide-panel">
+      <div class="guide-header">
+        <span>Xbox Guide</span>
+        <button class="btn btn-ghost" onclick="toggleGuide(false)">Close</button>
+      </div>
+      <button class="guide-item" onclick="openUrl('https://www.xbox.com/play'); toggleGuide(false);">☁️ Launch Xbox Cloud Gaming</button>
+      <button class="guide-item" onclick="openMiniGame(); toggleGuide(false);">🎮 Play Built-In: Neon Breaker</button>
+      <button class="guide-item" onclick="openAddModal(); toggleGuide(false);">➕ Pin Custom Game / URL</button>
+      <button class="guide-item" onclick="toggleFullscreen(); toggleGuide(false);">📺 Toggle TV Fullscreen Mode</button>
+      <button class="guide-item" onclick="changeGamertag(); toggleGuide(false);">👤 Edit Gamertag</button>
+      <button class="guide-item" onclick="toggleSound(); toggleGuide(false);" id="sound-toggle-btn">🔊 UI Sounds: ON</button>
+    </aside>
+  </div>
+
+  <!-- Add Shortcut Modal -->
+  <div class="modal" id="add-modal">
+    <div class="modal-box">
+      <h3 style="margin-top:0">Add Game or App Tile</h3>
+      <label>Title</label>
+      <input id="custom-title" placeholder="e.g., GeForce NOW, HakuX, Fortnite" />
+      <label>URL or Deep Link</label>
+      <input id="custom-url" placeholder="https://www.xbox.com/play" />
+      <div class="btn-row">
+        <button class="btn btn-ghost" onclick="closeAddModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveCustomTile()">Pin to Home</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Built-in Playable Console Game Modal -->
+  <div class="modal" id="game-modal">
+    <div style="display:flex; justify-content:space-between; align-items:center; width:min(560px, 95vw); margin-bottom:10px;">
+      <strong>NEON BREAKER (Controller / Touch Ready)</strong>
+      <button class="btn btn-ghost" onclick="closeMiniGame()">Exit Game (B)</button>
+    </div>
+    <canvas id="game-canvas" width="540" height="340"></canvas>
+    <div style="margin-top:8px; font-size:12px; color:var(--muted);">
+      Move paddle with Left Stick / D-Pad / Finger drag • Score: <span id="game-score">0</span>
+    </div>
+  </div>
+
+  <script>
+    // ---------- State & Default Console Tiles ----------
+    const defaultTiles = [
+      {
+        id: 'cloud',
+        tab: 'home',
+        large: true,
+        badge: 'Cloud Console',
+        title: 'Xbox Cloud Gaming',
+        sub: 'Stream console games directly to your phone',
+        bg: 'linear-gradient(135deg, #0d5e12 0%, #107c10 45%, #0a1f0d 100%)',
+        action: () => openUrl('https://www.xbox.com/play')
+      },
+      {
+        id: 'minigame',
+        tab: 'home',
+        badge: 'Installed',
+        title: 'Neon Breaker',
+        sub: 'Built-in controller demo game',
+        bg: 'linear-gradient(135deg, #1b2845 0%, #274060 100%)',
+        action: () => openMiniGame()
+      },
+      {
+        id: 'remote',
+        tab: 'home',
+        badge: 'Console Link',
+        title: 'Xbox Store & Library',
+        sub: 'Browse Game Pass catalog',
+        bg: 'linear-gradient(135deg, #252930 0%, #14171c 100%)',
+        action: () => openUrl('https://www.xbox.com/en-US/xbox-game-pass/games')
+      },
+      {
+        id: 'fortnite',
+        tab: 'games',
+        badge: 'Free Cloud Play',
+        title: 'Fortnite (Cloud)',
+        sub: 'Play via Xbox Cloud Gaming',
+        bg: 'linear-gradient(135deg, #4b2d83 0%, #20133a 100%)',
+        action: () => openUrl('https://www.xbox.com/play/games/fortnite/BT5P2X999VH2')
+      },
+      {
+        id: 'add',
+        tab: 'apps',
+        badge: 'Customize',
+        title: '+ Pin Game / Emulator',
+        sub: 'Add a custom link or web app',
+        bg: 'linear-gradient(135deg, #23272e 0%, #171a1f 100%)',
+        action: () => openAddModal()
+      },
+      {
+        id: 'tv',
+        tab: 'apps',
+        badge: 'Display',
+        title: 'TV / Fullscreen Mode',
+        sub: 'Best with USB-C to HDMI + Controller',
+        bg: 'linear-gradient(135deg, #0f3d3e 0%, #101f24 100%)',
+        action: () => toggleFullscreen()
+      }
+    ];
+
+    let customTiles = JSON.parse(localStorage.getItem('xconsole_tiles') || '[]');
+    let currentTab = 'home';
+    let focusIndex = 0;
+    let soundOn = true;
+    let audioCtx = null;
+
+    // ---------- Web Audio Console Chimes ----------
+    function ensureAudio() {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+    }
+
+    function playTone(freq, duration = 0.07, type = 'sine', vol = 0.08) {
+      if (!soundOn) return;
+      ensureAudio();
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+      gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + duration);
+    }
+
+    function playBootChime() {
+      if (!soundOn) return;
+      ensureAudio();
+      [220, 277.18, 329.63, 440].forEach((f, idx) => {
+        setTimeout(() => playTone(f, 0.55, 'triangle', 0.09), idx * 120);
+      });
+    }
+
+    // ---------- Boot & Clock ----------
+    document.getElementById('power-on-btn').addEventListener('click', () => {
+      playBootChime();
+      document.getElementById('boot-screen').classList.add('hidden');
+    });
+
+    function updateClock() {
+      const now = new Date();
+      document.getElementById('clock').textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    const savedTag = localStorage.getItem('xconsole_tag');
+    if (savedTag) document.getElementById('gamertag-display').textContent = savedTag;
+
+    // ---------- Render Dashboard ----------
+    function getVisibleTiles() {
+      const customFormatted = customTiles.map((t, i) => ({
+        id: 'custom_' + i,
+        tab: 'home',
+        badge: 'Pinned',
+        title: t.title,
+        sub: t.url,
+        bg: 'linear-gradient(135deg, #1d3b24 0%, #161a1e 100%)',
+        action: () => openUrl(t.url)
+      }));
+      const all = [...defaultTiles, ...customFormatted];
+      return currentTab === 'home' ? all : all.filter(t => t.tab === currentTab);
+    }
+
+    function renderTiles() {
+      const grid = document.getElementById('tile-grid');
+      const tiles = getVisibleTiles();
+      if (focusIndex >= tiles.length) focusIndex = Math.max(0, tiles.length - 1);
+      grid.innerHTML = '';
+
+      tiles.forEach((tile, idx) => {
+        const el = document.createElement('div');
+        el.className = `tile ${tile.large ? 'large' : ''} ${idx === focusIndex ? 'focused' : ''}`;
+        el.innerHTML = `
+          <div class="tile-bg" style="background:${tile.bg}"></div>
+          <div class="tile-content">
+            <div class="tile-badge">${tile.badge}</div>
+            <div class="tile-title">${tile.title}</div>
+            <div class="tile-sub">${tile.sub}</div>
+          </div>
+        `;
+        el.onclick = () => {
+          focusIndex = idx;
+          playTone(520, 0.08);
+          renderTiles();
+          tile.action();
+        };
+        grid.appendChild(el);
+      });
+    }
+
+    document.querySelectorAll('.tab').forEach(btn => {
+      btn.addEventListener('click', () => {
+        playTone(420, 0.05);
+        document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentTab = btn.dataset.tab;
+        focusIndex = 0;
+        renderTiles();
+      });
+    });
+
+    renderTiles();
+
+    // ---------- Actions ----------
+    function openUrl(url) {
+      window.open(url, '_blank', 'noopener');
+    }
+
+    function toggleGuide(force) {
+      const el = document.getElementById('guide-backdrop');
+      const open = force !== undefined ? force : !el.classList.contains('open');
+      el.classList.toggle('open', open);
+      playTone(open ? 360 : 280, 0.07);
+    }
+
+    function openAddModal() {
+      document.getElementById('add-modal').classList.add('open');
+    }
+    function closeAddModal() {
+      document.getElementById('add-modal').classList.remove('open');
+    }
+    function saveCustomTile() {
+      const title = document.getElementById('custom-title').value.trim();
+      const url = document.getElementById('custom-url').value.trim();
+      if (!title || !url) return;
+      customTiles.push({ title, url });
+      localStorage.setItem('xconsole_tiles', JSON.stringify(customTiles));
+      document.getElementById('custom-title').value = '';
+      document.getElementById('custom-url').value = '';
+      closeAddModal();
+      renderTiles();
+    }
+
+    function changeGamertag() {
+      const name = prompt('Enter your Gamertag:', document.getElementById('gamertag-display').textContent);
+      if (name && name.trim()) {
+        localStorage.setItem('xconsole_tag', name.trim());
+        document.getElementById('gamertag-display').textContent = name.trim();
+      }
+    }
+
+    function toggleSound() {
+      soundOn = !soundOn;
+      document.getElementById('sound-toggle-btn').textContent = `🔊 UI Sounds: ${soundOn ? 'ON' : 'OFF'}`;
+    }
+
+    function toggleFullscreen() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen?.();
+      } else {
+        document.exitFullscreen?.();
+      }
+    }
+
+    // ---------- Built-in Mini Game (Neon Breaker) ----------
+    let gameRunning = false;
+    let paddleX = 220, ballX = 270, ballY = 200, dx = 3.2, dy = -3.2, score = 0;
+    let bricks = [];
+
+    function initBricks() {
+      bricks = [];
+      for (let r = 0; r < 4; r++) {
+        for (let c = 0; c < 8; c++) {
+          bricks.push({ x: 18 + c * 64, y: 24 + r * 24, w: 56, h: 14, alive: true });
+        }
+      }
+    }
+
+    function openMiniGame() {
+      document.getElementById('game-modal').classList.add('open');
+      score = 0;
+      document.getElementById('game-score').textContent = score;
+      ballX = 270; ballY = 210; dx = 3.2; dy = -3.2;
+      initBricks();
+      gameRunning = true;
+      requestAnimationFrame(gameLoop);
+    }
+
+    function closeMiniGame() {
+      gameRunning = false;
+      document.getElementById('game-modal').classList.remove('open');
+    }
+
+    const canvas = document.getElementById('game-canvas');
+    const ctx = canvas.getContext('2d');
+
+    canvas.addEventListener('pointermove', e => {
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width;
+      paddleX = Math.max(0, Math.min(canvas.width - 100, (e.clientX - rect.left) * scaleX - 50));
+    });
+
+    function gameLoop() {
+      if (!gameRunning) return;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Gamepad paddle movement
+      const gp = navigator.getGamepads?.()[0];
+      if (gp) {
+        const axis = gp.axes[0] || 0;
+        if (Math.abs(axis) > 0.18) paddleX += axis * 7;
+        if (gp.buttons[14]?.pressed) paddleX -= 7;
+        if (gp.buttons[15]?.pressed) paddleX += 7;
+        paddleX = Math.max(0, Math.min(canvas.width - 100, paddleX));
+      }
+
+      // Draw bricks
+      bricks.forEach(b => {
+        if (!b.alive) return;
+        ctx.fillStyle = '#2ee83b';
+        ctx.fillRect(b.x, b.y, b.w, b.h);
+        if (ballX > b.x && ballX < b.x + b.w && ballY > b.y && ballY < b.y + b.h) {
+          dy = -dy;
+          b.alive = false;
+          score += 100;
+          document.getElementById('game-score').textContent = score;
+          playTone(620, 0.05);
+        }
+      });
+
+      // Draw paddle & ball
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(paddleX, canvas.height - 22, 100, 10);
+
+      ctx.beginPath();
+      ctx.arc(ballX, ballY, 7, 0, Math.PI * 2);
+      ctx.fillStyle = '#2ee83b';
+      ctx.fill();
+
+      ballX += dx;
+      ballY += dy;
+      if (ballX < 7 || ballX > canvas.width - 7) dx = -dx;
+      if (ballY < 7) dy = -dy;
+      if (ballY > canvas.height - 28 && ballX > paddleX && ballX < paddleX + 100) {
+        dy = -Math.abs(dy);
+        playTone(440, 0.04);
+      }
+      if (ballY > canvas.height) {
+        ballX = 270; ballY = 200; dy = -3.2;
+      }
+
+      requestAnimationFrame(gameLoop);
+    }
+
+    // ---------- Xbox Controller Polling (HTML5 Gamepad API) ----------
+    let lastMove = 0;
+    let prevButtons = {};
+
+    window.addEventListener('gamepadconnected', (e) => {
+      const badge = document.getElementById('ctrl-status');
+      badge.textContent = 'Controller Ready';
+      badge.classList.add('connected');
+      playTone(580, 0.1);
+    });
+
+    window.addEventListener('gamepaddisconnected', () => {
+      const badge = document.getElementById('ctrl-status');
+      badge.textContent = 'No Controller';
+      badge.classList.remove('connected');
+    });
+
+    function pollGamepad(now) {
+      const gp = navigator.getGamepads?.()[0];
+      if (gp) {
+        const badge = document.getElementById('ctrl-status');
+        if (!badge.classList.contains('connected')) {
+          badge.textContent = 'Controller Ready';
+          badge.classList.add('connected');
+        }
+
+        const justPressed = (idx) => {
+          const isDown = !!gp.buttons[idx]?.pressed;
+          const wasDown = !!prevButtons[idx];
+          prevButtons[idx] = isDown;
+          return isDown && !wasDown;
+        };
+
+        if (justPressed(1)) { // B button
+          if (gameRunning) closeMiniGame();
+          else toggleGuide();
+        }
+
+        if (!gameRunning && !document.getElementById('add-modal').classList.contains('open')) {
+          const tiles = getVisibleTiles();
+
+          // Navigation (D-Pad or Left Stick)
+          if (now - lastMove > 170) {
+            const ax = gp.axes[0] || 0;
+            const ay = gp.axes[1] || 0;
+            if (gp.buttons[15]?.pressed || ax > 0.55) {
+              focusIndex = (focusIndex + 1) % tiles.length;
+              playTone(300, 0.04); renderTiles(); lastMove = now;
+            } else if (gp.buttons[14]?.pressed || ax < -0.55) {
+              focusIndex = (focusIndex - 1 + tiles.length) % tiles.length;
+              playTone(300, 0.04); renderTiles(); lastMove = now;
+            } else if (gp.buttons[13]?.pressed || ay > 0.55) {
+              focusIndex = Math.min(tiles.length - 1, focusIndex + 2);
+              playTone(300, 0.04); renderTiles(); lastMove = now;
+            } else if (gp.buttons[12]?.pressed || ay < -0.55) {
+              focusIndex = Math.max(0, focusIndex - 2);
+              playTone(300, 0.04); renderTiles(); lastMove = now;
+            }
+          }
+
+          if (justPressed(0) && tiles[focusIndex]) { // A button
+            playTone(540, 0.08);
+            tiles[focusIndex].action();
+          }
+          if (justPressed(2)) openAddModal(); // X button
+          if (justPressed(3)) toggleFullscreen(); // Y button
+          if (justPressed(9) || justPressed(16)) toggleGuide(); // Start / Xbox button
+
+          // LB / RB Tab switching
+          const tabOrder = ['home', 'games', 'apps'];
+          if (justPressed(4)) { // LB
+            const next = tabOrder[(tabOrder.indexOf(currentTab) + 2) % 3];
+            document.querySelector(`.tab[data-tab="${next}"]`).click();
+          }
+          if (justPressed(5)) { // RB
+            const next = tabOrder[(tabOrder.indexOf(currentTab) + 1) % 3];
+            document.querySelector(`.tab[data-tab="${next}"]`).click();
+          }
+        }
+      }
+      requestAnimationFrame(pollGamepad);
+    }
+    requestAnimationFrame(pollGamepad);
+  </script>
+</body>
+</html>
